@@ -460,11 +460,12 @@ async function ficha(id) {
       (p.uom_id ? '<div class="spec"><span>Unidad</span><span>' + esc(p.uom_id[1]) + '</span></div>' : '') +
       (p.weight ? '<div class="spec"><span>Peso</span><span>' + p.weight + ' kg</span></div>' : '') +
       (p.volume ? '<div class="spec"><span>Volumen</span><span>' + p.volume + ' m³</span></div>' : '') +
-      '<div class="spec"><span>Precio ' + esc(CONFIG.PRICELIST) + '</span><span>' + fmt(base) + '</span></div>' +
+      '<div class="spec" style="color:#1D4ED8"><span style="color:#1D4ED8">Precio ' + esc(CONFIG.PRICELIST) + '</span><span>' + fmt(base) + '</span></div>' +
       CONFIG.DESCUENTOS.map((d, i) => {
         const v = CONFIG.DESCUENTOS.slice(0, i + 1).reduce((a, x) => a * (1 - x.pct / 100), base);
         const ultimo = i === CONFIG.DESCUENTOS.length - 1;
-        return '<div class="spec"' + (ultimo ? ' style="border:0"' : '') + '><span>' +
+        const col = ['#0F6E56', '#E30613'][i] || 'var(--ink)';
+        return '<div class="spec" style="color:' + col + (ultimo ? ';border:0' : '') + '"><span style="color:' + col + '">' +
                esc(d.label) + ' (' + d.pct + '%)</span><span>' + fmt(v) + '</span></div>';
       }).join('') +
       '</div>';
