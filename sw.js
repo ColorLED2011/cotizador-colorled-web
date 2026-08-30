@@ -1,9 +1,10 @@
 /* Cotizador COLOR LED — service worker.
-   Cache-first para los assets locales del repo.
-   Network-only para cualquier llamada al Worker o a APIs externas:
-   nunca se sirven precios ni stock desde cache. */
+   La pagina (index.html) va primero a la red y solo usa cache si no hay
+   conexion: asi los cambios llegan enseguida a los vendedores.
+   Los iconos y el manifest si van primero a cache, casi nunca cambian.
+   Las llamadas al Worker nunca se cachean. */
 
-const CACHE = 'colorled-cotizador-v1';
+const CACHE = 'colorled-cotizador-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -14,7 +15,11 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c => Promise.all(ASSETS.map(a => c.add(a).catch(() => {}))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', e => {
@@ -25,22 +30,35 @@ self.addEventListener('activate', e => {
   );
 });
 
+function guardar(req, res) {
+  if (res && res.status === 200 && res.type === 'basic') {
+    const copia = res.clone();
+    caches.open(CACHE).then(c => c.put(req, copia));
+  }
+  return res;
+}
+
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
-  const esLocal = url.origin === self.location.origin;
+  if (url.origin !== self.location.origin) return;
 
-  if (!esLocal) return;
+  const esPagina = req.mode === 'navigate' ||
+    url.pathname.endsWith('/') ||
+    url.pathname.endsWith('index.html');
+
+  if (esPagina) {
+    e.respondWith(
+      fetch(req)
+        .then(res => guardar(req, res))
+        .catch(() => caches.match(req).then(hit => hit || caches.match('./index.html')))
+    );
+    return;
+  }
 
   e.respondWith(
-    caches.match(req).then(hit => hit || fetch(req).then(res => {
-      if (res && res.status === 200 && res.type === 'basic') {
-        const copia = res.clone();
-        caches.open(CACHE).then(c => c.put(req, copia));
-      }
-      return res;
-    }).catch(() => caches.match('./index.html')))
+    caches.match(req).then(hit => hit || fetch(req).then(res => guardar(req, res)))
   );
 });
