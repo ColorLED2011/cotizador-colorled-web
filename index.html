@@ -459,7 +459,13 @@ async function ficha(id) {
       (p.uom_id ? '<div class="spec"><span>Unidad</span><span>' + esc(p.uom_id[1]) + '</span></div>' : '') +
       (p.weight ? '<div class="spec"><span>Peso</span><span>' + p.weight + ' kg</span></div>' : '') +
       (p.volume ? '<div class="spec"><span>Volumen</span><span>' + p.volume + ' m³</span></div>' : '') +
-      '<div class="spec" style="border:0"><span>Precio ' + esc(CONFIG.PRICELIST) + '</span><span>' + fmt(base) + '</span></div>' +
+      '<div class="spec"><span>Precio ' + esc(CONFIG.PRICELIST) + '</span><span>' + fmt(base) + '</span></div>' +
+      CONFIG.DESCUENTOS.map((d, i) => {
+        const v = CONFIG.DESCUENTOS.slice(0, i + 1).reduce((a, x) => a * (1 - x.pct / 100), base);
+        const ultimo = i === CONFIG.DESCUENTOS.length - 1;
+        return '<div class="spec"' + (ultimo ? ' style="border:0"' : '') + '><span>' +
+               esc(d.label) + ' (' + d.pct + '%)</span><span>' + fmt(v) + '</span></div>';
+      }).join('') +
       '</div>';
   } catch (e) {
     el('fichaBody').innerHTML = '<p style="color:var(--err)">No se pudo cargar la ficha: ' + esc(e.message) + '</p>';
@@ -482,7 +488,9 @@ function pintarCatalogo(q) {
     const d2 = neto(b);
     return '<tr onclick="agregar(' + p.id + ');cerrar(\'mCatalogo\');toast(\'Agregado al pedido\')" style="cursor:pointer">' +
       '<td><div style="display:flex;gap:8px;align-items:center"><img class="thumb" style="width:34px;height:34px" src="' + img(p.image_128) + '" alt="">' +
-      '<div><div class="code">' + esc(p.default_code || '—') + '</div><div class="nm" style="max-width:150px">' + esc(p.name) + '</div></div></div></td>' +
+      '<div><div class="code">' + esc(p.default_code || '—') + '</div><div class="nm" style="max-width:150px">' + esc(p.name) + '</div>' +
+      '<button class="btn-sm" style="margin-top:4px;padding:3px 7px;font-size:11px" onclick="event.stopPropagation();ficha(' + p.id + ')">Ficha técnica</button>' +
+      '</div></div></td>' +
       '<td>' + fmt(b) + '</td><td style="color:var(--ink-2)">' + fmt(d1) + '</td><td style="color:var(--ink-2)">' + fmt(d2) + '</td></tr>';
   }).join('') || '<tr><td colspan="4" class="muted" style="text-align:center;padding:20px">Sin resultados</td></tr>';
 }
