@@ -141,7 +141,7 @@ const CONFIG = {
   PRICELIST:  'USD BASE',
   DESCUENTOS: [
     { label: 'Pago en divisas', pct: 75 },
-    { label: 'Pronto pago',     pct: 10 }
+    { label: 'Pronto pago 10 días continuos', pct: 10 }
   ],
   MARCA:      'COLOR LED',
   WHATSAPP:   '584144278946',
@@ -501,26 +501,18 @@ el('buscarCat').addEventListener('input', e => pintarCatalogo(e.target.value));
 function cerrar(id) { el(id).classList.remove('open'); }
 
 function notaHTML(base) {
-  const usd = n => 'USD ' + (n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const bd = 'padding:9px 12px;border-bottom:1px solid #E5E7EB;';
   let acum = base, filas = '';
-  CONFIG.DESCUENTOS.forEach((d, i) => {
+  CONFIG.DESCUENTOS.forEach(d => {
+    const antes = acum;
     acum = acum * (1 - d.pct / 100);
-    const pref = CONFIG.DESCUENTOS.slice(0, i + 1).map(x => x.pct + '%').join(' + ');
-    filas += '<tr><td style="' + bd + 'color:#0F6E56">Con ' + pref + ' — ' + esc(d.label) + '</td>' +
-             '<td style="' + bd + 'text-align:right">' + usd(acum) + '</td></tr>';
+    filas += '<tr><td>' + esc(d.label) + '</td><td style="text-align:right">' + d.pct + '%</td><td style="text-align:right">' + fmt(antes - acum) + '</td><td style="text-align:right">' + fmt(acum) + '</td></tr>';
   });
-  return '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;max-width:520px;font-size:13px;color:#111827">' +
-    '<tr><td colspan="2" style="background:#111827;color:#ffffff;font-weight:600;padding:9px 12px">DESCUENTOS ESPECIALES APLICABLES</td></tr>' +
-    '<tr><td style="' + bd + '">Subtotal a precio lista (' + esc(CONFIG.PRICELIST) + ')</td>' +
-    '<td style="' + bd + 'text-align:right;font-weight:600">' + usd(base) + '</td></tr>' +
-    filas +
-    '<tr><td style="background:#FDEBEC;padding:11px 12px;font-weight:600;color:#8C040C">TOTAL A PAGAR</td>' +
-    '<td style="background:#FDEBEC;padding:11px 12px;text-align:right;font-weight:600;color:#8C040C">' + usd(acum) + '</td></tr>' +
-    '<tr><td colspan="2" style="padding:9px 12px;font-size:11px;color:#4B5563;border-top:1px solid #E5E7EB">' +
-    'Vendedor: <b>' + esc(el('vendedor').value.trim()) + '</b> · ' + esc(CONFIG.MARCA) + ' · ' + new Date().toLocaleDateString('es-VE') +
-    '<br><span style="color:#9CA3AF">Descuentos informativos: no están aplicados en las líneas del pedido.</span>' +
-    '</td></tr></table>';
+  return '<p><strong>Descuentos informativos — no aplicados en las líneas</strong></p>' +
+    '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse">' +
+    '<thead><tr><th>Concepto</th><th>%</th><th>Descuento</th><th>Neto</th></tr></thead>' +
+    '<tbody><tr><td>Total ' + esc(CONFIG.PRICELIST) + '</td><td style="text-align:right">—</td><td style="text-align:right">—</td><td style="text-align:right">' + fmt(base) + '</td></tr>' +
+    filas + '</tbody></table>' +
+    '<p>Vendedor: ' + esc(el('vendedor').value.trim()) + ' · ' + esc(CONFIG.MARCA) + '</p>';
 }
 
 async function enviarPedido() {
