@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cotizador COLOR LED</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#111827">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --brand:#E30613; --brand-dark:#8C040C; --brand-soft:#FDEBEC;
+  --ink:#111827; --ink-2:#4B5563; --ink-3:#9CA3AF;
+  --bg:#F4F4F2; --card:#FFFFFF; --line:#E5E7EB;
+  --ok:#0F6E56; --ok-soft:#E1F5EE; --err:#A32D2D; --err-soft:#FCEBEB;
+  --r:10px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.5;padding-bottom:96px}
+header{position:sticky;top:0;z-index:20;background:var(--ink);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;padding-top:calc(14px + env(safe-area-inset-top))}
+header h1{font-size:16px;font-weight:600;margin:0;letter-spacing:.02em}
+header small{display:block;font-size:11px;color:#9CA3AF;font-weight:400;letter-spacing:.06em;text-transform:uppercase}
+header small.hint{color:var(--brand)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ink-3);flex:0 0 auto}
+.dot.on{background:#22C55E}.dot.off{background:#EF4444}
+main{max-width:720px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+label{display:block;font-size:12px;color:var(--ink-2);margin-bottom:5px;font-weight:500}
+input,select,textarea{width:100%;font:inherit;font-size:15px;padding:11px 12px;border:1px solid var(--line);border-radius:var(--r);background:#fff;color:var(--ink)}
+input:focus,select:focus{outline:none;border-color:var(--brand)}
+.row{display:flex;gap:10px}.row>*{flex:1}
+button{font:inherit;cursor:pointer;border-radius:var(--r);border:1px solid var(--line);background:#fff;color:var(--ink);padding:11px 14px;font-weight:500}
+button:active{transform:scale(.985)}
+.btn-brand{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn-dark{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn-sm{padding:7px 11px;font-size:13px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.sug{border:1px solid var(--line);border-radius:var(--r);margin-top:6px;background:#fff;max-height:230px;overflow:auto}
+.sug div{padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px}
+.sug div:last-child{border-bottom:0}
+.sug div:hover{background:var(--brand-soft)}
+.line{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:var(--r);padding:8px;margin-bottom:8px;background:#fff}
+.thumb{width:46px;height:46px;border-radius:8px;background:var(--bg);flex:0 0 auto;object-fit:contain;border:1px solid var(--line)}
+.line .info{flex:1;min-width:0}
+.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--brand-dark)}
+.nm{font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qty{width:60px;text-align:center;padding:7px 4px;font-size:14px}
+.tot{text-align:right;font-size:13px;min-width:72px}
+.icon{background:none;border:0;color:var(--ink-3);font-size:20px;line-height:1;padding:4px 6px}
+.sum{background:var(--brand-soft);border:1px solid #F7C6C9;border-radius:var(--r);padding:12px}
+.sum div{display:flex;justify-content:space-between;padding:3px 0;font-size:14px}
+.sum .big{border-top:1px solid #F0A3A8;margin-top:6px;padding-top:8px;font-weight:600;font-size:16px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 16px;padding-bottom:calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px;z-index:20}
+.bar button{flex:1}
+.modal{position:fixed;inset:0;background:rgba(17,24,39,.55);z-index:50;display:none;align-items:flex-end;justify-content:center}
+.modal.open{display:flex}
+.sheet{background:var(--bg);width:100%;max-width:720px;max-height:92vh;border-radius:16px 16px 0 0;display:flex;flex-direction:column;overflow:hidden}
+.sheet header{border-radius:16px 16px 0 0;padding-top:14px}
+.sheet .body{overflow:auto;padding:14px}
+table.cat{width:100%;border-collapse:collapse;font-size:13px;background:#fff}
+table.cat th{text-align:right;font-size:11px;color:var(--ink-2);font-weight:500;padding:8px 6px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff}
+table.cat th:first-child{text-align:left}
+table.cat td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;vertical-align:middle}
+table.cat td:first-child{text-align:left}
+.toast{position:fixed;left:16px;right:16px;bottom:92px;z-index:60;padding:12px 14px;border-radius:var(--r);font-size:14px;display:none;max-width:688px;margin:0 auto}
+.toast.show{display:block}
+.toast.ok{background:var(--ok-soft);color:var(--ok);border:1px solid #9FE1CB}
+.toast.err{background:var(--err-soft);color:var(--err);border:1px solid #F7C1C1}
+.muted{color:var(--ink-3);font-size:12px}
+.spec{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.spec span:first-child{color:var(--ink-2)}
+h2{font-size:14px;margin:0 0 10px;font-weight:600}
+</style>
+</head>
+<body>
+
+<header>
+  <div><h1>COLOR LED</h1><small>Cotizador</small></div>
+  <div style="display:flex;align-items:center;gap:8px"><span class="muted" id="estado" style="color:#9CA3AF">conectando…</span><span class="dot" id="dot"></span></div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="row" style="margin-bottom:12px">
+      <div><label for="vendedor">Vendedor</label><input id="vendedor" placeholder="Escribe tu nombre" autocomplete="off"></div>
+    </div>
+    <label for="cliente">Cliente</label>
+    <input id="cliente" placeholder="Buscar cliente por nombre o RIF" autocomplete="off">
+    <div class="sug" id="sugCliente" style="display:none"></div>
+    <div id="clienteSel" class="muted" style="margin-top:6px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Productos</h2>
+    <input id="buscarProd" placeholder="Código o nombre del producto" autocomplete="off">
+    <div class="sug" id="sugProd" style="display:none"></div>
+    <div id="lineas" style="margin-top:12px"></div>
+    <div id="vacio" class="muted">Aún no has agregado productos.</div>
+  </div>
+
+  <div class="card">
+    <h2>Totales</h2>
+    <div class="sum">
+      <div><span>Total USD base</span><span id="tBase">$0,00</span></div>
+      <div id="filaDesc"></div>
+      <div class="big"><span>Neto con descuentos</span><span id="tNeto">$0,00</span></div>
+    </div>
+    <p class="muted" style="margin:10px 0 0">Los descuentos no se aplican en las líneas del pedido: se informan como tabla en la nota del presupuesto.</p>
+  </div>
+</main>
+
+<div class="bar">
+  <button class="btn-sm" onclick="abrirCatalogo()">Catálogo</button>
+  <button class="btn-sm" onclick="nuevoPedido()">Pedido nuevo</button>
+  <button class="btn-brand" id="btnEnviar" onclick="enviarPedido()">Enviar pedido</button>
+</div>
+
+<div class="modal" id="mCatalogo"><div class="sheet">
+  <header><div><h1>Catálogo</h1><small class="hint">Precios en USD</small></div><button class="icon" style="color:#fff" onclick="cerrar('mCatalogo')" aria-label="Cerrar">✕</button></header>
+  <div class="body">
+    <input id="buscarCat" placeholder="Filtrar catálogo" autocomplete="off" style="margin-bottom:12px">
+    <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden">
+      <table class="cat"><thead><tr><th>Producto</th><th>Base</th><th id="thD1">−75%</th><th id="thD2">+10%</th></tr></thead><tbody id="tbodyCat"></tbody></table>
+    </div>
+  </div>
+</div></div>
+
+<div class="modal" id="mFicha"><div class="sheet">
+  <header><div><h1>Ficha técnica</h1><small class="hint" id="fichaCode"></small></div><button class="icon" style="color:#fff" onclick="cerrar('mFicha')" aria-label="Cerrar">✕</button></header>
+  <div class="body" id="fichaBody"></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CONFIG = {
+  PROXY_URL:  'https://cotizador-colorled.colorlednaguanagua.workers.dev',
+  COMPANY_ID: 1,
+  PRICELIST:  'USD BASE',
+  DESCUENTOS: [
+    { label: 'Pago en divisas', pct: 75 },
+    { label: 'Pronto pago',     pct: 10 }
+  ],
+  MARCA:      'COLOR LED',
+  WHATSAPP:   '584144278946',
+  MAX_PRODUCTOS: 800
+};
+
+const S = { productos: [], precios: {}, pricelistId: null, cliente: null, lineas: [] };
+
+const DISPOSITIVO = (function () {
+  try {
+    let d = localStorage.getItem('colorled_dispositivo');
+    if (!d) {
+      d = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2));
+      localStorage.setItem('colorled_dispositivo', d);
+    }
+    return d;
+  } catch (e) { return 'sin-id'; }
+})();
+
+const fmt = n => '$' + (n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const el = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const img = b64 => b64 ? 'data:image/png;base64,' + b64 : 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="%23F4F4F2"/><circle cx="24" cy="21" r="8" fill="none" stroke="%239CA3AF" stroke-width="2"/><path d="M20 32h8" stroke="%239CA3AF" stroke-width="2"/></svg>');
+
+function toast(msg, tipo) {
+  const t = el('toast');
+  t.className = 'toast show ' + (tipo || 'ok');
+  t.textContent = msg;
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.className = 'toast', 4200);
+}
+
+async function rpc(model, method, args, kwargs) {
+  const res = await fetch(CONFIG.PROXY_URL + '/web/dataset/call_kw', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Dispositivo': DISPOSITIVO },
+    body: JSON.stringify({
+      params: {
+        model, method,
+        args: args || [],
+        kwargs: Object.assign({ context: { allowed_company_ids: [CONFIG.COMPANY_ID], company_id: CONFIG.COMPANY_ID } }, kwargs || {})
+      }
+    })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.data && data.error.data.message ? data.error.data.message : (data.error.message || data.error));
+  return data.result;
+}
+
+function neto(base) {
+  return CONFIG.DESCUENTOS.reduce((v, d) => v * (1 - d.pct / 100), base);
+}
+
+function precioDe(p) {
+  const it = S.precios[p.id] || S.precios['t' + (Array.isArray(p.product_tmpl_id) ? p.product_tmpl_id[0] : p.product_tmpl_id)] || S.precios.global;
+  if (!it) return p.list_price || 0;
+  if (it.compute_price === 'fixed') return it.fixed_price || 0;
+  if (it.compute_price === 'percentage') return (p.list_price || 0) * (1 - (it.percent_price || 0) / 100);
+  return p.list_price || 0;
+}
+
+async function cargar() {
+  try {
+    const pls = await rpc('product.pricelist', 'search_read', [[['name', '=', CONFIG.PRICELIST]]], { fields: ['id'], limit: 1 });
+    if (!pls.length) throw new Error('No existe la tarifa "' + CONFIG.PRICELIST + '" en Odoo');
+    S.pricelistId = pls[0].id;
+
+    const items = await rpc('product.pricelist.item', 'search_read', [[['pricelist_id', '=', S.pricelistId]]],
+      { fields: ['product_id', 'product_tmpl_id', 'applied_on', 'compute_price', 'fixed_price', 'percent_price', 'min_quantity'], limit: 6000 });
+
+    items.forEach(it => {
+      if (it.min_quantity && it.min_quantity > 1) return;
+      if (it.product_id) S.precios[it.product_id[0]] = it;
+      else if (it.product_tmpl_id) S.precios['t' + it.product_tmpl_id[0]] = it;
+      else if (it.applied_on === '3_global' && !S.precios.global) S.precios.global = it;
+    });
+
+    S.productos = await rpc('product.product', 'search_read',
+      [[['qty_available', '>', 0], ['sale_ok', '=', true]]],
+      { fields: ['id', 'display_name', 'name', 'default_code', 'product_tmpl_id', 'list_price', 'image_128'], limit: CONFIG.MAX_PRODUCTOS, order: 'default_code asc' });
+
+    el('dot').className = 'dot on';
+    el('estado').textContent = S.productos.length + ' productos';
+  } catch (e) {
+    el('dot').className = 'dot off';
+    el('estado').textContent = 'sin conexión';
+    toast('No se pudo cargar el catálogo: ' + e.message, 'err');
+  }
+}
+
+function buscar(q) {
+  q = q.trim().toLowerCase();
+  if (!q) return [];
+  return S.productos.filter(p =>
+    (p.default_code || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q)
+  ).slice(0, 20);
+}
+
+el('buscarProd').addEventListener('input', e => {
+  const box = el('sugProd'), res = buscar(e.target.value);
+  if (!res.length) { box.style.display = 'none'; return; }
+  box.innerHTML = res.map(p =>
+    '<div onclick="agregar(' + p.id + ')"><span class="code">' + esc(p.default_code || '—') + '</span> · ' + esc(p.name) + ' — ' + fmt(precioDe(p)) + '</div>'
+  ).join('');
+  box.style.display = 'block';
+});
+
+function agregar(id) {
+  const p = S.productos.find(x => x.id === id);
+  if (!p) return;
+  const ya = S.lineas.find(l => l.id === id);
+  if (ya) ya.qty += 1;
+  else S.lineas.push({ id, code: p.default_code, name: p.name, image: p.image_128, precio: precioDe(p), qty: 1 });
+  el('buscarProd').value = '';
+  el('sugProd').style.display = 'none';
+  render();
+}
+
+function setQty(id, v) {
+  const l = S.lineas.find(x => x.id === id);
+  if (!l) return;
+  l.qty = Math.max(1, parseInt(v, 10) || 1);
+  render();
+}
+
+function quitar(id) { S.lineas = S.lineas.filter(l => l.id !== id); render(); }
+
+function render() {
+  el('vacio').style.display = S.lineas.length ? 'none' : 'block';
+  el('lineas').innerHTML = S.lineas.map(l =>
+    '<div class="line">' +
+      '<img class="thumb" src="' + img(l.image) + '" alt="">' +
+      '<div class="info"><div class="code">' + esc(l.code || '—') + '</div><div class="nm">' + esc(l.name) + '</div>' +
+      '<button class="btn-sm" style="margin-top:4px;padding:4px 8px;font-size:12px" onclick="ficha(' + l.id + ')">Ficha técnica</button></div>' +
+      '<input class="qty" type="number" min="1" value="' + l.qty + '" onchange="setQty(' + l.id + ',this.value)">' +
+      '<div class="tot">' + fmt(l.precio * l.qty) + '<br><span class="muted">' + fmt(l.precio) + ' c/u</span></div>' +
+      '<button class="icon" onclick="quitar(' + l.id + ')" aria-label="Quitar">✕</button>' +
+    '</div>'
+  ).join('');
+
+  const base = S.lineas.reduce((s, l) => s + l.precio * l.qty, 0);
+  el('tBase').textContent = fmt(base);
+  let acum = base, filas = '';
+  CONFIG.DESCUENTOS.forEach(d => {
+    acum = acum * (1 - d.pct / 100);
+    filas += '<div><span>' + esc(d.label) + ' (' + d.pct + '%)</span><span>' + fmt(acum) + '</span></div>';
+  });
+  el('filaDesc').outerHTML = '<div id="filaDesc">' + filas + '</div>';
+  el('tNeto').textContent = fmt(acum);
+}
+
+function normaliza(s) {
+  return (s == null ? '' : String(s)).toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9ñ ]/g, ' ')
+    .replace(/\b(ca|sa|srl|rl|cia|compania|c a|s a)\b/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+
+function lev(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const fila = [i];
+    for (let j = 1; j <= b.length; j++) {
+      fila[j] = Math.min(prev[j] + 1, fila[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = fila;
+  }
+  return prev[b.length];
+}
+
+function similitud(a, b) {
+  a = normaliza(a); b = normaliza(b);
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  if (a.includes(b) || b.includes(a)) return 0.92;
+  const ta = a.split(' ').filter(Boolean), tb = b.split(' ').filter(Boolean);
+  const sb = new Set(tb);
+  let inter = 0;
+  new Set(ta).forEach(t => { if (sb.has(t)) inter++; });
+  const dice = (2 * inter) / (new Set(ta).size + sb.size);
+  const ratio = 1 - lev(a, b) / Math.max(a.length, b.length);
+  return Math.max(dice, ratio);
+}
+
+async function buscarCandidatos(nombre) {
+  const base = normaliza(nombre);
+  if (!base) return [];
+  const toks = base.split(' ').filter(t => t.length >= 4);
+  const terms = toks.length ? toks.slice(0, 5) : [base];
+  const hojas = terms.map(t => ['name', 'ilike', t]);
+  hojas.push(['vat', 'ilike', nombre.trim()]);
+  const dom = Array(hojas.length - 1).fill('|').concat(hojas);
+  const r = await rpc('res.partner', 'search_read', [dom],
+    { fields: ['id', 'name', 'vat', 'phone'], limit: 80 });
+  return r.map(c => Object.assign({ score: similitud(nombre, c.name) }, c))
+          .sort((x, y) => y.score - x.score);
+}
+
+let tCli;
+el('cliente').addEventListener('input', e => {
+  S.cliente = null; el('clienteSel').textContent = '';
+  const q = e.target.value.trim();
+  clearTimeout(tCli);
+  if (q.length < 3) { el('sugCliente').style.display = 'none'; return; }
+  tCli = setTimeout(async () => {
+    try {
+      const r = (await buscarCandidatos(q)).slice(0, 8);
+      const box = el('sugCliente');
+      S.hitsCliente = r;
+      box.innerHTML = r.map((c, i) =>
+        '<div onclick="pickCliente(' + i + ')">' + esc(c.name) +
+        (c.vat ? ' <span class="muted">· ' + esc(c.vat) + '</span>' : '') +
+        ' <span class="muted">· ' + Math.round(c.score * 100) + '%</span></div>'
+      ).join('') + '<div onclick="crearCliente()" style="color:var(--brand-dark)">+ Crear cliente «' + esc(q) + '»</div>';
+      box.style.display = 'block';
+    } catch (err) { toast('Error buscando cliente: ' + err.message, 'err'); }
+  }, 350);
+});
+
+function pickCliente(i, nombreDirecto, idDirecto) {
+  const c = nombreDirecto ? { id: idDirecto, name: nombreDirecto } : (S.hitsCliente || [])[i];
+  if (!c) return;
+  S.cliente = { id: c.id, name: c.name };
+  el('cliente').value = c.name;
+  el('clienteSel').textContent = 'Cliente seleccionado en Odoo';
+  el('sugCliente').style.display = 'none';
+}
+
+async function crearCliente() {
+  const nombre = el('cliente').value.trim();
+  if (nombre.length < 3) return toast('Escribe el nombre del cliente', 'err');
+  try {
+    const id = await rpc('res.partner', 'create', [{ name: nombre, company_type: 'company' }]);
+    pickCliente(null, nombre, id);
+    toast('Cliente creado en Odoo');
+  } catch (e) { toast('No se pudo crear el cliente: ' + e.message, 'err'); }
+}
+
+const CASI_SEGURO = 0.86;
+const PARECIDO    = 0.55;
+
+function fiable(a, b) {
+  const na = normaliza(a), nb = normaliza(b);
+  if (!na || !nb) return false;
+  if (na === nb || na.includes(nb) || nb.includes(na)) return true;
+  const ta = new Set(na.split(' ').filter(Boolean));
+  const tb = new Set(nb.split(' ').filter(Boolean));
+  let inter = 0;
+  ta.forEach(t => { if (tb.has(t)) inter++; });
+  return (2 * inter) / (ta.size + tb.size) >= 0.7;
+}
+
+async function crearClienteYEnviar() {
+  await crearCliente();
+  if (S.cliente) enviarPedido();
+}
+
+async function resolverCliente(nombre) {
+  const cands = await buscarCandidatos(nombre);
+  const mejor = cands[0];
+
+  if (mejor && mejor.score >= CASI_SEGURO && fiable(nombre, mejor.name)) {
+    S.cliente = { id: mejor.id, name: mejor.name };
+    el('cliente').value = mejor.name;
+    el('clienteSel').textContent = 'Coincide con «' + mejor.name + '» en Odoo';
+    el('sugCliente').style.display = 'none';
+    return true;
+  }
+
+  const parecidos = cands.filter(c => c.score >= PARECIDO).slice(0, 3);
+  if (parecidos.length) {
+    S.hitsCliente = parecidos;
+    el('sugCliente').innerHTML =
+      '<div class="muted" style="cursor:default;background:var(--brand-soft)">¿Es alguno de estos?</div>' +
+      parecidos.map((c, i) =>
+        '<div onclick="pickCliente(' + i + ');enviarPedido()">' + esc(c.name) +
+        (c.vat ? ' <span class="muted">· ' + esc(c.vat) + '</span>' : '') +
+        ' <span class="muted">· ' + Math.round(c.score * 100) + '%</span></div>'
+      ).join('') +
+      '<div onclick="crearClienteYEnviar()" style="color:var(--brand-dark)">' +
+      'No, crear «' + esc(nombre) + '» como cliente nuevo</div>';
+    el('sugCliente').style.display = 'block';
+    toast('Encontré clientes parecidos, elige uno', 'err');
+    return false;
+  }
+
+  const id = await rpc('res.partner', 'create', [{ name: nombre, company_type: 'company' }]);
+  S.cliente = { id, name: nombre };
+  el('clienteSel').textContent = 'Cliente nuevo creado en Odoo';
+  return true;
+}
+
+async function ficha(id) {
+  el('mFicha').classList.add('open');
+  el('fichaBody').innerHTML = '<p class="muted">Cargando…</p>';
+  try {
+    const r = await rpc('product.product', 'read', [[id], ['display_name', 'default_code', 'image_1024', 'description_sale', 'barcode', 'weight', 'volume', 'categ_id', 'uom_id', 'product_template_attribute_value_ids']]);
+    const p = r[0];
+    let attrs = [];
+    if (p.product_template_attribute_value_ids && p.product_template_attribute_value_ids.length) {
+      attrs = await rpc('product.template.attribute.value', 'read', [p.product_template_attribute_value_ids, ['display_name']]);
+    }
+    el('fichaCode').textContent = p.default_code || '';
+    const base = precioDe(S.productos.find(x => x.id === id) || { id, list_price: 0 });
+    el('fichaBody').innerHTML =
+      '<img src="' + img(p.image_1024) + '" alt="" style="width:100%;max-width:340px;display:block;margin:0 auto 14px;border-radius:12px;background:#fff;border:1px solid var(--line)">' +
+      '<div class="card"><h2>' + esc(p.display_name) + '</h2>' +
+      (p.description_sale ? '<p style="font-size:14px;color:var(--ink-2)">' + esc(p.description_sale) + '</p>' : '') +
+      attrs.map(a => '<div class="spec"><span>Atributo</span><span>' + esc(a.display_name) + '</span></div>').join('') +
+      (p.barcode ? '<div class="spec"><span>Código de barras</span><span>' + esc(p.barcode) + '</span></div>' : '') +
+      (p.categ_id ? '<div class="spec"><span>Categoría</span><span>' + esc(p.categ_id[1]) + '</span></div>' : '') +
+      (p.uom_id ? '<div class="spec"><span>Unidad</span><span>' + esc(p.uom_id[1]) + '</span></div>' : '') +
+      (p.weight ? '<div class="spec"><span>Peso</span><span>' + p.weight + ' kg</span></div>' : '') +
+      (p.volume ? '<div class="spec"><span>Volumen</span><span>' + p.volume + ' m³</span></div>' : '') +
+      '<div class="spec" style="border:0"><span>Precio ' + esc(CONFIG.PRICELIST) + '</span><span>' + fmt(base) + '</span></div>' +
+      '</div>';
+  } catch (e) {
+    el('fichaBody').innerHTML = '<p style="color:var(--err)">No se pudo cargar la ficha: ' + esc(e.message) + '</p>';
+  }
+}
+
+function abrirCatalogo() {
+  el('mCatalogo').classList.add('open');
+  el('thD1').textContent = '−' + CONFIG.DESCUENTOS[0].pct + '%';
+  el('thD2').textContent = '+' + (CONFIG.DESCUENTOS[1] ? CONFIG.DESCUENTOS[1].pct : 0) + '%';
+  pintarCatalogo('');
+}
+
+function pintarCatalogo(q) {
+  q = (q || '').trim().toLowerCase();
+  const lista = (q ? S.productos.filter(p => (p.default_code || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q)) : S.productos).slice(0, 300);
+  el('tbodyCat').innerHTML = lista.map(p => {
+    const b = precioDe(p);
+    const d1 = b * (1 - CONFIG.DESCUENTOS[0].pct / 100);
+    const d2 = neto(b);
+    return '<tr onclick="agregar(' + p.id + ');cerrar(\'mCatalogo\');toast(\'Agregado al pedido\')" style="cursor:pointer">' +
+      '<td><div style="display:flex;gap:8px;align-items:center"><img class="thumb" style="width:34px;height:34px" src="' + img(p.image_128) + '" alt="">' +
+      '<div><div class="code">' + esc(p.default_code || '—') + '</div><div class="nm" style="max-width:150px">' + esc(p.name) + '</div></div></div></td>' +
+      '<td>' + fmt(b) + '</td><td style="color:var(--ink-2)">' + fmt(d1) + '</td><td style="color:var(--ink-2)">' + fmt(d2) + '</td></tr>';
+  }).join('') || '<tr><td colspan="4" class="muted" style="text-align:center;padding:20px">Sin resultados</td></tr>';
+}
+
+el('buscarCat').addEventListener('input', e => pintarCatalogo(e.target.value));
+function cerrar(id) { el(id).classList.remove('open'); }
+
+function notaHTML(base) {
+  let acum = base, filas = '';
+  CONFIG.DESCUENTOS.forEach(d => {
+    const antes = acum;
+    acum = acum * (1 - d.pct / 100);
+    filas += '<tr><td>' + esc(d.label) + '</td><td style="text-align:right">' + d.pct + '%</td><td style="text-align:right">' + fmt(antes - acum) + '</td><td style="text-align:right">' + fmt(acum) + '</td></tr>';
+  });
+  return '<p><strong>Descuentos informativos — no aplicados en las líneas</strong></p>' +
+    '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse">' +
+    '<thead><tr><th>Concepto</th><th>%</th><th>Descuento</th><th>Neto</th></tr></thead>' +
+    '<tbody><tr><td>Total ' + esc(CONFIG.PRICELIST) + '</td><td style="text-align:right">—</td><td style="text-align:right">—</td><td style="text-align:right">' + fmt(base) + '</td></tr>' +
+    filas + '</tbody></table>' +
+    '<p>Vendedor: ' + esc(el('vendedor').value.trim()) + ' · ' + esc(CONFIG.MARCA) + '</p>';
+}
+
+async function enviarPedido() {
+  const vendedor = el('vendedor').value.trim();
+  if (!vendedor) { el('vendedor').focus(); return toast('Escribe tu nombre en el campo Vendedor', 'err'); }
+  const nombreCli = el('cliente').value.trim();
+  if (!S.cliente && nombreCli.length < 3) { el('cliente').focus(); return toast('Escribe el nombre del cliente', 'err'); }
+  if (!S.lineas.length) return toast('Agrega al menos un producto', 'err');
+  const btn = el('btnEnviar');
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  try {
+    if (!S.cliente) {
+      const listo = await resolverCliente(nombreCli);
+      if (!listo) { btn.disabled = false; btn.textContent = 'Enviar pedido'; return; }
+    }
+    const base = S.lineas.reduce((s, l) => s + l.precio * l.qty, 0);
+    const vals = {
+      partner_id: S.cliente.id,
+      company_id: CONFIG.COMPANY_ID,
+      pricelist_id: S.pricelistId,
+      client_order_ref: vendedor,
+      note: notaHTML(base),
+      order_line: S.lineas.map(l => [0, 0, { product_id: l.id, product_uom_qty: l.qty, price_unit: l.precio }])
+    };
+    const id = await rpc('sale.order', 'create', [vals]);
+    const r = await rpc('sale.order', 'read', [[id], ['name']]);
+    toast('Presupuesto ' + r[0].name + ' creado en borrador');
+    nuevoPedido();
+  } catch (e) {
+    toast('No se pudo enviar: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enviar pedido';
+  }
+}
+
+function nuevoPedido() {
+  S.lineas = []; S.cliente = null;
+  el('cliente').value = ''; el('clienteSel').textContent = '';
+  el('buscarProd').value = '';
+  el('sugProd').style.display = 'none'; el('sugCliente').style.display = 'none';
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#cliente,#sugCliente')) el('sugCliente').style.display = 'none';
+  if (!e.target.closest('#buscarProd,#sugProd')) el('sugProd').style.display = 'none';
+});
+
+try {
+  const guardado = localStorage.getItem('colorled_vendedor');
+  if (guardado) el('vendedor').value = guardado;
+} catch (e) {}
+
+el('vendedor').addEventListener('change', () => {
+  try { localStorage.setItem('colorled_vendedor', el('vendedor').value.trim()); } catch (e) {}
+});
+
+function registrarApertura() {
+  fetch(CONFIG.PROXY_URL + '/uso', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Dispositivo': DISPOSITIVO },
+    body: JSON.stringify({ dispositivo: DISPOSITIVO, vendedor: el('vendedor').value.trim() })
+  }).catch(() => {});
+}
+
+render();
+cargar();
+registrarApertura();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
