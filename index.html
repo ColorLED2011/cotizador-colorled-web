@@ -502,24 +502,25 @@ function cerrar(id) { el(id).classList.remove('open'); }
 
 function notaHTML(base) {
   const usd = n => 'USD ' + (n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const bd = 'padding:9px 12px;border-bottom:1px solid #E5E7EB;';
+  const bd = 'padding:5px 9px;border-bottom:1px solid #E5E7EB;';
   let acum = base, filas = '';
   CONFIG.DESCUENTOS.forEach((d, i) => {
     acum = acum * (1 - d.pct / 100);
-    const pref = CONFIG.DESCUENTOS.slice(0, i + 1).map(x => x.pct + '%').join(' + ');
-    filas += '<tr><td style="' + bd + 'color:#0F6E56">Con ' + pref + ' — ' + esc(d.label) + '</td>' +
-             '<td style="' + bd + 'text-align:right">' + usd(acum) + '</td></tr>';
+    const ultimo = i === CONFIG.DESCUENTOS.length - 1;
+    const pref = CONFIG.DESCUENTOS.slice(0, i + 1).map(x => '&minus;' + x.pct + '%').join(' ');
+    const est = ultimo
+      ? 'padding:7px 9px;background:#FDEBEC;color:#8C040C;font-weight:700;'
+      : bd + 'color:#0F6E56;';
+    filas += '<tr><td style="' + est + '">' + pref + ' ' + esc(d.label) + '</td>' +
+             '<td style="' + est + 'text-align:right;white-space:nowrap">' + usd(acum) + '</td></tr>';
   });
-  return '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;max-width:520px;font-size:13px;color:#111827">' +
-    '<tr><td colspan="2" style="background:#111827;color:#ffffff;font-weight:600;padding:9px 12px">DESCUENTOS ESPECIALES APLICABLES</td></tr>' +
-    '<tr><td style="' + bd + '">Subtotal a precio lista (' + esc(CONFIG.PRICELIST) + ')</td>' +
-    '<td style="' + bd + 'text-align:right;font-weight:600">' + usd(base) + '</td></tr>' +
+  return '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;max-width:340px;font-size:11px;color:#111827">' +
+    '<tr><td colspan="2" style="background:#111827;color:#ffffff;font-weight:600;padding:6px 9px;letter-spacing:.03em">DESCUENTOS ESPECIALES</td></tr>' +
+    '<tr><td style="' + bd + '">Precio lista (' + esc(CONFIG.PRICELIST) + ')</td>' +
+    '<td style="' + bd + 'text-align:right;font-weight:600;white-space:nowrap">' + usd(base) + '</td></tr>' +
     filas +
-    '<tr><td style="background:#FDEBEC;padding:11px 12px;font-weight:600;color:#8C040C">TOTAL A PAGAR</td>' +
-    '<td style="background:#FDEBEC;padding:11px 12px;text-align:right;font-weight:600;color:#8C040C">' + usd(acum) + '</td></tr>' +
-    '<tr><td colspan="2" style="padding:9px 12px;font-size:11px;color:#4B5563;border-top:1px solid #E5E7EB">' +
+    '<tr><td colspan="2" style="padding:6px 9px;font-size:9.5px;color:#6B7280;border-top:1px solid #E5E7EB">' +
     'Vendedor: <b>' + esc(el('vendedor').value.trim()) + '</b> · ' + esc(CONFIG.MARCA) + ' · ' + new Date().toLocaleDateString('es-VE') +
-    '<br><span style="color:#9CA3AF">Descuentos informativos: no están aplicados en las líneas del pedido.</span>' +
     '</td></tr></table>';
 }
 
