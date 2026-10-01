@@ -572,24 +572,56 @@ function verCotizacion() {
     '<div style="display:flex;justify-content:flex-end;margin-top:14px">' + notaHTML(base) + '</div>' +
     '<p class="muted" style="margin:14px 0 0;border-top:1px solid var(--line);padding-top:8px">Precios en USD sujetos a disponibilidad de inventario. Cotización informativa, no es factura.</p>';
   el('mCotizacion').classList.add('open');
+  S.pdf = generarPDF();
+  S.pdf.catch(() => {});
 }
+
+const nombreCot = () => ('Cotizacion_' + (el('cliente').value.trim() || 'cliente') + '_' + new Date().toLocaleDateString('es-VE')).replace(/[\/\s]+/g, '-');
 
 function imprimirCot() {
   const t = document.title;
-  document.title = ('Cotizacion_' + (el('cliente').value.trim() || 'cliente') + '_' + new Date().toLocaleDateString('es-VE')).replace(/[\/\s]+/g, '-');
+  document.title = nombreCot();
   window.addEventListener('afterprint', () => { document.title = t; }, { once: true });
   window.print();
 }
 
-function compartirCot() {
-  const base = S.lineas.reduce((s, l) => s + l.precio * l.qty, 0);
-  const txt = 'Cotización ' + CONFIG.MARCA + ' · ' + new Date().toLocaleDateString('es-VE') +
-    '\nCliente: ' + (el('cliente').value.trim() || '—') +
-    '\n\n' + S.lineas.map(l => l.qty + ' x ' + (l.code ? l.code + ' ' : '') + l.name + ' — ' + fmt(l.precio * l.qty)).join('\n') +
-    '\n\nTotal USD base: ' + fmt(base) + '\nNeto con descuentos: ' + fmt(neto(base)) +
-    '\nVendedor: ' + el('vendedor').value.trim();
-  if (navigator.share) navigator.share({ title: 'Cotización ' + CONFIG.MARCA, text: txt }).catch(() => {});
-  else window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+let libPDF;
+function cargarLibPDF() {
+  return libPDF = libPDF || new Promise((ok, mal) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    s.onload = ok;
+    s.onerror = () => { libPDF = null; mal(new Error('No se pudo cargar el generador de PDF')); };
+    document.head.appendChild(s);
+  });
+}
+
+async function generarPDF() {
+  await cargarLibPDF();
+  const copia = el('doc').cloneNode(true);
+  copia.removeAttribute('id');
+  copia.style.cssText = 'width:720px;border:0;padding:0;border-radius:0';
+  const blob = await html2pdf().set({
+    margin: 12,
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
+    jsPDF: { unit: 'mm', format: 'letter' },
+    pagebreak: { avoid: 'tr' }
+  }).from(copia).outputPdf('blob');
+  return new File([blob], nombreCot() + '.pdf', { type: 'application/pdf' });
+}
+
+async function compartirCot() {
+  let f;
+  try { f = await S.pdf; } catch (e) { S.pdf = generarPDF(); return toast(e.message + '. Intenta de nuevo.', 'err'); }
+  if (navigator.canShare && navigator.canShare({ files: [f] })) {
+    navigator.share({ files: [f], title: 'Cotización ' + CONFIG.MARCA }).catch(() => {});
+  } else {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(f); a.download = f.name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast('PDF descargado: ' + f.name);
+  }
 }
 
 async function enviarPedido() {
