@@ -71,6 +71,26 @@ table.cat td:first-child{text-align:left}
 .spec{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
 .spec span:first-child{color:var(--ink-2)}
 h2{font-size:14px;margin:0 0 10px;font-weight:600}
+.doc{background:#fff;border:1px solid var(--line);border-radius:8px;padding:18px;font-size:12px}
+.doc-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--brand);padding-bottom:8px;margin-bottom:12px}
+.doc-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:var(--bg);border-radius:6px;padding:8px 10px;margin-bottom:12px}
+.doc-meta small{display:block;font-size:10px;color:var(--ink-3)}
+table.doc-t{width:100%;border-collapse:collapse}
+table.doc-t th{background:var(--ink);color:#fff;font-weight:500;font-size:11px;padding:6px;text-align:right}
+table.doc-t td{padding:6px;border-bottom:1px solid var(--line);text-align:right;vertical-align:middle}
+table.doc-t th:nth-child(-n+2),table.doc-t td:nth-child(-n+2){text-align:left}
+table.doc-t tr{break-inside:avoid}
+.doc-img{width:44px;height:44px;object-fit:contain;border:1px solid var(--line);border-radius:4px;display:block}
+@media print{
+  @page{size:letter;margin:12mm}
+  body{background:#fff;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body>*:not(#mCotizacion){display:none!important}
+  #mCotizacion{position:static;background:none;display:block}
+  #mCotizacion .sheet{max-height:none;max-width:none;background:#fff;border-radius:0;display:block}
+  #mCotizacion header,.no-print{display:none!important}
+  #mCotizacion .body{overflow:visible;padding:0}
+  .doc{border:0;padding:0}
+}
 </style>
 </head>
 <body>
@@ -108,6 +128,7 @@ h2{font-size:14px;margin:0 0 10px;font-weight:600}
       <div class="big"><span>Neto con descuentos</span><span id="tNeto">$0,00</span></div>
     </div>
     <p class="muted" style="margin:10px 0 0">Los descuentos no se aplican en las líneas del pedido: se informan como tabla en la nota del presupuesto.</p>
+    <button class="btn-dark" style="width:100%;margin-top:12px" onclick="verCotizacion()">Ver cotización</button>
   </div>
 </main>
 
@@ -130,6 +151,14 @@ h2{font-size:14px;margin:0 0 10px;font-weight:600}
 <div class="modal" id="mFicha"><div class="sheet">
   <header><div><h1>Ficha técnica</h1><small class="hint" id="fichaCode"></small></div><button class="icon" style="color:#fff" onclick="cerrar('mFicha')" aria-label="Cerrar">✕</button></header>
   <div class="body" id="fichaBody"></div>
+</div></div>
+
+<div class="modal" id="mCotizacion"><div class="sheet">
+  <header><div><h1>Cotización</h1><small class="hint">Vista previa</small></div><button class="icon" style="color:#fff" onclick="cerrar('mCotizacion')" aria-label="Cerrar">✕</button></header>
+  <div class="body">
+    <div class="row no-print" style="margin-bottom:12px"><button onclick="imprimirCot()">Imprimir / PDF</button><button class="btn-brand" onclick="compartirCot()">Compartir</button></div>
+    <div class="doc" id="doc"></div>
+  </div>
 </div></div>
 
 <div class="toast" id="toast"></div>
@@ -164,7 +193,7 @@ const DISPOSITIVO = (function () {
 const fmt = n => '$' + (n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const el = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const img = b64 => b64 ? 'data:image/png;base64,' + b64 : 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="%23F4F4F2"/><circle cx="24" cy="21" r="8" fill="none" stroke="%239CA3AF" stroke-width="2"/><path d="M20 32h8" stroke="%239CA3AF" stroke-width="2"/></svg>');
+const img = b64 => b64 ? 'data:image/png;base64,' + b64 : 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#F4F4F2"/><circle cx="24" cy="21" r="8" fill="none" stroke="#9CA3AF" stroke-width="2"/><path d="M20 32h8" stroke="#9CA3AF" stroke-width="2"/></svg>');
 
 function toast(msg, tipo) {
   const t = el('toast');
@@ -522,6 +551,45 @@ function notaHTML(base) {
     '<tr><td colspan="2" style="padding:6px 9px;font-size:9.5px;color:#6B7280;border-top:1px solid #E5E7EB">' +
     'Vendedor: <b>' + esc(el('vendedor').value.trim()) + '</b> · ' + esc(CONFIG.MARCA) + ' · ' + new Date().toLocaleDateString('es-VE') +
     '</td></tr></table>';
+}
+
+function verCotizacion() {
+  if (!S.lineas.length) return toast('Agrega al menos un producto', 'err');
+  const base = S.lineas.reduce((s, l) => s + l.precio * l.qty, 0);
+  const n = v => (v || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  el('doc').innerHTML =
+    '<div class="doc-head"><div style="font-size:20px;font-weight:600;color:var(--brand)">' + esc(CONFIG.MARCA) + '</div>' +
+    '<div style="text-align:right"><div style="font-weight:600;font-size:14px">COTIZACIÓN</div><div class="muted">' + new Date().toLocaleDateString('es-VE') + '</div></div></div>' +
+    '<div class="doc-meta"><div><small>CLIENTE</small><b>' + esc(el('cliente').value.trim() || '—') + '</b></div>' +
+    '<div><small>VENDEDOR</small><b>' + esc(el('vendedor').value.trim() || '—') + '</b></div></div>' +
+    '<table class="doc-t"><thead><tr><th style="width:56px">Imagen</th><th>Producto</th><th>Cant.</th><th>Precio</th><th>Total</th></tr></thead><tbody>' +
+    S.lineas.map(l =>
+      '<tr><td><img class="doc-img" src="' + img(l.image) + '" alt=""></td>' +
+      '<td><div class="code">' + esc(l.code || '—') + '</div>' + esc(l.name) + '</td>' +
+      '<td>' + l.qty + '</td><td>' + n(l.precio) + '</td><td>' + n(l.precio * l.qty) + '</td></tr>'
+    ).join('') +
+    '</tbody></table>' +
+    '<div style="display:flex;justify-content:flex-end;margin-top:14px">' + notaHTML(base) + '</div>' +
+    '<p class="muted" style="margin:14px 0 0;border-top:1px solid var(--line);padding-top:8px">Precios en USD sujetos a disponibilidad de inventario. Cotización informativa, no es factura.</p>';
+  el('mCotizacion').classList.add('open');
+}
+
+function imprimirCot() {
+  const t = document.title;
+  document.title = ('Cotizacion_' + (el('cliente').value.trim() || 'cliente') + '_' + new Date().toLocaleDateString('es-VE')).replace(/[\/\s]+/g, '-');
+  window.addEventListener('afterprint', () => { document.title = t; }, { once: true });
+  window.print();
+}
+
+function compartirCot() {
+  const base = S.lineas.reduce((s, l) => s + l.precio * l.qty, 0);
+  const txt = 'Cotización ' + CONFIG.MARCA + ' · ' + new Date().toLocaleDateString('es-VE') +
+    '\nCliente: ' + (el('cliente').value.trim() || '—') +
+    '\n\n' + S.lineas.map(l => l.qty + ' x ' + (l.code ? l.code + ' ' : '') + l.name + ' — ' + fmt(l.precio * l.qty)).join('\n') +
+    '\n\nTotal USD base: ' + fmt(base) + '\nNeto con descuentos: ' + fmt(neto(base)) +
+    '\nVendedor: ' + el('vendedor').value.trim();
+  if (navigator.share) navigator.share({ title: 'Cotización ' + CONFIG.MARCA, text: txt }).catch(() => {});
+  else window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
 }
 
 async function enviarPedido() {
